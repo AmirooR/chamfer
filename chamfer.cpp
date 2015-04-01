@@ -56,7 +56,7 @@ int main( int argc, const char** argv )
     annotated_img.create(img.size(), CV_32SC2);
     dt.create(img.size(), CV_32FC1);
     dt.setTo(0);
-    computeDistanceTransform(img, dt, annotated_img, 30.0);
+    computeDistanceTransformA(img, dt, annotated_img, 30.0);
     imshow("dt",dt);
 //    normalize( dt, dt, 0, 1., cv::NORM_MINMAX);
 //    imshow("normalized",dt);
