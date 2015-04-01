@@ -1,0 +1,5 @@
+*.o
+.*.swp
+chamfer
+temp/*
+Template/*
