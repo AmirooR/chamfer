@@ -80,13 +80,35 @@ void computeDistanceTransform2(Mat& edges_img, Mat& dist_img, Mat& annotate_img,
 }
 
 
-TemplateMatcher::TemplateMatcher(Mat& _edgeImg, vector<Point>& _initialPoints, float _gamma = 1.0f, float _learning_rate = 1.0f, int _max_iter = 1000):
-    gamma(_gamma), learning_rate(_learning_rate), max_iter(_max_iter)
+TemplateMatcher::TemplateMatcher(Mat& _edgeImg, Mat& _template_contour, vector<Point>& _initialPoints, configuration_t _config):
+    config(_config)
 {
     edgeImg = _edgeImg.clone();
+	template_contour = _template_contour.clone();
+	
     initialPoints.resize( _initialPoints.size() );
+	currentPoints.resize( _initialPoints.size() );
     for(int i = 0; i < _initialPoints.size(); ++i)
     {
         initialPoints[i] = _initialPoints[i];
+		currentPoints[i] = _initialPoints[i];
     }
+	
+	annotated_img.create(edgeImg.size(), CV_32SC2);
+	DT.create(edgeImg.size(), CV_32FC1);
+	DT.setTo(0);	
+	computeDistanceTransform2(edgeImg, DT, annotated_img, config.dt_truncate, config.dt_a, config.dt_b);
+	
+	lambda.create(edgeImg.size(), CV_32FC1);
+	lambda.setTo(1.0f);
+	
+	//computing gradients
+	Scharr( DT, grad_x_DT, CV_32FC1, 1, 0, 1, 0, BORDER_DEFAULT );
+	Scharr( DT, grad_y_DT, CV_32FC1, 0, 1, -1, 0, BORDER_DEFAULT ); //TODO: check for scale == -1
+	
+	params.resize( _initialPoints.size() );
+	current_gradients.resize( _initialPoints.size() );
+	scale_norms.resize( _initialPoints.size() );
+	
+	
 }
