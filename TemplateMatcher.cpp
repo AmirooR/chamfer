@@ -105,8 +105,9 @@ TemplateMatcher::TemplateMatcher(Mat& _edgeImg, Mat& _template_contour, vector<P
 	DT.setTo(0);	
 	computeDistanceTransform2(edgeImg, DT, annotated_img, config.dt_truncate, config.dt_a, config.dt_b);
 	
-	lambda.create(edgeImg.size(), CV_32FC1);
-	lambda.setTo(1.0f); //TODO: how to calc. lambda
+	//lambda.create(edgeImg.size(), CV_32FC1);
+	//lambda.setTo(1.0f); //TODO: how to calc. lambda
+	lambda.resize(_initialPoints.size(), 1.0);
 	
 	//computing gradients
 	Scharr( DT, grad_x_DT, CV_32FC1, 1, 0, 1, 0, BORDER_DEFAULT );
@@ -133,4 +134,51 @@ TemplateMatcher::TemplateMatcher(Mat& _edgeImg, Mat& _template_contour, vector<P
 		}
 	}
 	
+}
+
+float TemplateMatcher::compute_loss()
+{
+	//TODO: asserts
+	float loss = 0.0f;
+	for(size_t i = 0; i < currentPoints.size(); ++i)
+	{
+		//TODO: can make it faster
+		Point2f _newPoint;
+		Point2f _newPoint_image;
+		Point2f current_local = imageToLocal(currentPoints[i]);
+		apply_transform( current_local, params[i], _newPoint);
+		_newPoint_image = localToImage(_newPoint);
+		
+		if(_newPoint_image.x >= 1 && _newPoint_image.y >= 1 && _newPoint_image.x < edgeImg.cols-1, _newPoint_image.y < edgeImg.rows-1)
+		{
+			/* data term */
+			//interpolation
+			int x_1 = floor(_newPoint_image.x);
+			int x_2 = ceil(_newPoint_image.x);
+			int y_1 = floor(_newPoint_image.y);
+			int y_2 = ceil(_newPoint_image.y);
+		
+			float v1 = DT.at<float>(y_1, x_1);
+			float v2 = DT.at<float>(y_1, x_2);
+			float v3 = DT.at<float>(y_2, x_1);
+			float v4 = DT.at<float>(y_2, x_2);
+		
+			float fx1 = _newPoint_image.x - x_1;
+			float fy1 = _newPoint_image.y - y_1;
+			float fx2 = 1.0f - fx1;
+			float fy2 = 1.0f - fy1;
+		
+			loss += fx1 * fy1 * v1 + fx1 * fy2 * v3 + fx2 * fy1 * v2 + fx2 * fy2 * v4; //TODO: not accurate
+			
+			/* pairwise term */
+			loss += lambda[i] * param_distance(params[i], params[i+1], i, i+1);
+		}
+		else
+		{
+			return BIG_LOSS;
+		}
+	}
+	
+	loss += lambda[currentPoints.size()-1] * param_distance(params[currentPoints.size()-1], params[0], currentPoints.size()-1, 0);
+	return loss;
 }
