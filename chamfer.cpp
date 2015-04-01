@@ -1,11 +1,4 @@
-//#include "opencv2/imgproc/imgproc.hpp"
-//#include "opencv2/highgui/highgui.hpp"
-//#include "opencv2/contrib/contrib.hpp"
-#include <opencv2/opencv.hpp>
-#include <iostream>
-
-using namespace cv;
-using namespace std;
+#include "TemplateMatcher.hpp"
 
 static void help()
 {
@@ -51,24 +44,47 @@ int main( int argc, const char** argv )
 
     vector<vector<Point> > results;
     vector<float> costs;
-    int best = chamerMatching( img, tpl, results, costs );
+    int best = chamerMatching( img, tpl, results, costs, 1, 10, 5.0, 3,3, 15, 0.8, 3.0, 0.4, 35 );
     if( best < 0 )
     {
         cout << "matching not found" << endl;
         return -1;
     }
+    cout << "Results: "<<endl;
+    Mat dt;
+    Mat annotated_img;
+    annotated_img.create(img.size(), CV_32SC2);
+    dt.create(img.size(), CV_32FC1);
+    dt.setTo(0);
+    computeDistanceTransform(img, dt, annotated_img, 30.0);
+    imshow("dt",dt);
+//    normalize( dt, dt, 0, 1., cv::NORM_MINMAX);
+//    imshow("normalized",dt);
+//    imshow("annotated",annotated_img);
 
-    size_t i, n = results[best].size();
-    for( i = 0; i < n; i++ )
+
+   
+
+    for(int j = 0; j < results.size(); j++)
     {
-        Point pt = results[best][i];
-        if( pt.inside(Rect(0, 0, cimg.cols, cimg.rows)) )
-           cimg.at<Vec3b>(pt) = Vec3b(0, 255, 0);
-    }
+        Mat dimg = cimg.clone();
+    	size_t i, n = results[j].size();
+    	for( i = 0; i < n; i++ )
+    	{
+        	Point pt = results[j][i];
+        	if( pt.inside(Rect(0, 0, cimg.cols, cimg.rows)) )
+		  if( j != best )
+           		dimg.at<Vec3b>(pt) = Vec3b(0, 255, 0);
+		  else
+			dimg.at<Vec3b>(pt) = Vec3b(0, 0, 255);
 
-    imshow("result", cimg);
+    	}
+	imshow("result", dimg);
 
-    waitKey();
+    	waitKey(0);
 
+     }
+
+    
     return 0;
 }
