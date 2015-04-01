@@ -1,6 +1,6 @@
 #include "TemplateMatcher.hpp"
 
-void computeDistanceTransformA(Mat& edges_img, Mat& dist_img, Mat& annotate_img, float truncate_dt, float a, float b)
+void computeDistanceTransform2(Mat& edges_img, Mat& dist_img, Mat& annotate_img, float truncate_dt, float a, float b)
 {
     int d[][2] = { {-1,-1}, { 0,-1}, { 1,-1},
             {-1,0},          { 1,0},

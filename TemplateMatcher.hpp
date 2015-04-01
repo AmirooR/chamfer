@@ -18,7 +18,7 @@ typedef struct{
     bool normalize_scales;
 }configuration_t;
 
-void computeDistanceTransformA(Mat& edges_img, Mat& dist_img, Mat& annotate_img, float truncate_dt, float a = 1.0, float b = 1.5);
+void computeDistanceTransform2(Mat& edges_img, Mat& dist_img, Mat& annotate_img, float truncate_dt, float a = 1.0, float b = 1.5);
 
 
 
