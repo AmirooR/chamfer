@@ -84,7 +84,7 @@ int main( int argc, const char** argv )
 			dimg.at<Vec3b>(pt) = Vec3b(0, 0, 255);
 
     	}
-	imshow("result", dimg);
+		imshow("result", dimg);
 
     	waitKey(0);
 

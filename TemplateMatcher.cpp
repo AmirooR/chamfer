@@ -1,5 +1,11 @@
 #include "TemplateMatcher.hpp"
 
+inline float euclidean_dist2f(Point2f& p1, Point2f& p2)
+{
+	Point2f c = p1 - p2;
+	return sqrt( (p1.x - p2.x)*(p1.x - p2.x) + (p1.y - p2.y)*(p1.y - p2.y) );
+}
+
 void computeDistanceTransform2(Mat& edges_img, Mat& dist_img, Mat& annotate_img, float truncate_dt, float a, float b)
 {
     int d[][2] = { {-1,-1}, { 0,-1}, { 1,-1},
@@ -81,7 +87,7 @@ void computeDistanceTransform2(Mat& edges_img, Mat& dist_img, Mat& annotate_img,
 
 
 TemplateMatcher::TemplateMatcher(Mat& _edgeImg, Mat& _template_contour, vector<Point>& _initialPoints, configuration_t _config):
-    config(_config)
+    config(_config), origin(0,0)
 {
     edgeImg = _edgeImg.clone();
 	template_contour = _template_contour.clone();
@@ -100,15 +106,31 @@ TemplateMatcher::TemplateMatcher(Mat& _edgeImg, Mat& _template_contour, vector<P
 	computeDistanceTransform2(edgeImg, DT, annotated_img, config.dt_truncate, config.dt_a, config.dt_b);
 	
 	lambda.create(edgeImg.size(), CV_32FC1);
-	lambda.setTo(1.0f);
+	lambda.setTo(1.0f); //TODO: how to calc. lambda
 	
 	//computing gradients
 	Scharr( DT, grad_x_DT, CV_32FC1, 1, 0, 1, 0, BORDER_DEFAULT );
 	Scharr( DT, grad_y_DT, CV_32FC1, 0, 1, -1, 0, BORDER_DEFAULT ); //TODO: check for scale == -1
 	
-	params.resize( _initialPoints.size() );
-	current_gradients.resize( _initialPoints.size() );
-	scale_norms.resize( _initialPoints.size() );
+	params.resize( _initialPoints.size(), param_t());
+	initialize_params();
+	current_gradients.resize( _initialPoints.size(), param_t(0,0));
 	
+	for(size_t i = 0; i < _initialPoints.size(); ++i)
+	{
+		origin.x += _initialPoints[i].x;
+		origin.y += _initialPoints[i].y;
+	}
+	origin.x = origin.x/_initialPoints.size();
+	origin.y = origin.y/_initialPoints.size();
+	
+	if(config.normalize_scales)
+	{
+		scale_norms.resize( _initialPoints.size(),1.0f);
+		for(size_t i = 0; i < initialPoints.size(); ++i)
+		{
+			scale_norms[i] = euclidean_dist2f(origin, initialPoints[i]);
+		}
+	}
 	
 }
