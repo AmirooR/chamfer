@@ -3,7 +3,7 @@
 inline float euclidean_dist2f(Point2f& p1, Point2f& p2)
 {
 	Point2f c = p1 - p2;
-	return sqrt( (p1.x - p2.x)*(p1.x - p2.x) + (p1.y - p2.y)*(p1.y - p2.y) );
+	return sqrt( c.x*c.x + c.y*c.y );
 }
 
 void computeDistanceTransform2(Mat& edges_img, Mat& dist_img, Mat& annotate_img, float truncate_dt, float a, float b)
@@ -95,7 +95,7 @@ TemplateMatcher::TemplateMatcher(Mat& _edgeImg, Mat& _template_contour, vector<P
 	
     initialPoints.resize( _initialPoints.size() );
 	currentPoints.resize( _initialPoints.size() );
-    for(int i = 0; i < _initialPoints.size(); ++i)
+    for(size_t i = 0; i < _initialPoints.size(); ++i)
     {
         initialPoints[i] = _initialPoints[i];
 		currentPoints[i] = _initialPoints[i];
@@ -130,12 +130,11 @@ TemplateMatcher::TemplateMatcher(Mat& _edgeImg, Mat& _template_contour, vector<P
 	
 	if(config.normalize_scales)
 	{
-        cout<<"Scales normalizing factors \n\t";
+        
 		scale_norms.resize( _initialPoints.size(),1.0f);
 		for(size_t i = 0; i < initialPoints.size(); ++i)
 		{
 			scale_norms[i] = euclidean_dist2f(origin, initialPoints[i]);
-            cout<<scale_norms[i]<< " ";
 		}
         cout<<endl;
 	}
@@ -155,7 +154,7 @@ float TemplateMatcher::compute_loss()
 		apply_transform( current_local, params[i], _newPoint);
 		_newPoint_image = localToImage(_newPoint);
 		
-		if(_newPoint_image.x >= 1 && _newPoint_image.y >= 1 && _newPoint_image.x < edgeImg.cols-1, _newPoint_image.y < edgeImg.rows-1)
+		if( (_newPoint_image.x >= 1) && (_newPoint_image.y >= 1) && (_newPoint_image.x < (edgeImg.cols-1)) && (_newPoint_image.y < (edgeImg.rows-1)))
 		{
 			/* data term */
 			loss += bilinear_interpolate(DT, _newPoint_image);			
@@ -180,7 +179,8 @@ float TemplateMatcher::compute_loss()
 
 void TemplateMatcher::minimize_single_step()
 {
-    current_gradients.resize( currentPoints.size(), param_t(0,0) ); //TODO: check to be correct
+    //current_gradients.resize( currentPoints.size(), param_t(0,0) ); //TODO: check to be correct
+    std::fill(current_gradients.begin(), current_gradients.end(), param_t(0,0));
 
     for(size_t i = 0; i < current_gradients.size(); ++i)
     {
@@ -190,7 +190,7 @@ void TemplateMatcher::minimize_single_step()
         apply_transform( current_local, params[i], _newPoint);
         _newPoint_image = localToImage(_newPoint);
 
-        if(_newPoint_image.x >= 1 && _newPoint_image.y >= 1 && _newPoint_image.x < edgeImg.cols-1, _newPoint_image.y < edgeImg.rows-1)
+        if( (_newPoint_image.x >= 1) && (_newPoint_image.y >= 1) && (_newPoint_image.x < (edgeImg.cols-1)) && (_newPoint_image.y < (edgeImg.rows-1)))
         {
             float grad_x = bilinear_interpolate(grad_x_DT, _newPoint_image);
             float grad_y = bilinear_interpolate(grad_y_DT, _newPoint_image);
@@ -237,7 +237,7 @@ void TemplateMatcher::minimize_single_step()
                 Point2f _new_local;
                 apply_transform( current_local, par, _new_local);
                 Point2f _new_p = localToImage( _new_local);
-                cout<< "ds: "<<current_gradients[i].s << " dphi: "<<current_gradients[i].phi << endl;
+                
                 if(_new_p.x > 1 && _new_p.y > 1 && _new_p.x < edgeImg.cols -1 && _new_p.y < edgeImg.rows - 1 )
                 {
                     currentPoints[i] = _new_p;
@@ -260,6 +260,7 @@ void TemplateMatcher::minimize_single_step()
             Point2f _new_local;
             apply_transform( current_local, par, _new_local);
             Point2f _new_p = localToImage( _new_local);
+			
             if(_new_p.x > 1 && _new_p.y > 1 && _new_p.x < edgeImg.cols -1 && _new_p.y < edgeImg.rows - 1 )
             {
                 currentPoints[i] = _new_p;
@@ -268,4 +269,22 @@ void TemplateMatcher::minimize_single_step()
 
         }
     } 
+}
+
+vector<Point2f> TemplateMatcher::minimize()
+{
+	float best_loss = BIG_LOSS;
+	vector<Point2f> best_points;
+	for(int i = 0; i < config.max_iter; i++)
+	{		
+		minimize_single_step();
+		float n_loss = compute_loss();
+		if(n_loss < best_loss)
+		{
+			best_loss = n_loss;
+			best_points = currentPoints;
+		}
+		cout<<"\t ** LOSS: "<< n_loss << endl;
+	}
+	return best_points;
 }

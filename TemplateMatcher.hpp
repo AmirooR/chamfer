@@ -66,7 +66,7 @@ class TemplateMatcher
     TemplateMatcher(Mat& edgeImg, Mat& template_contour, vector<Point>& initialPoints, configuration_t config);
     float compute_loss();
     void minimize_single_step();
-    void minimize();
+    vector<Point2f> minimize();
 	inline void apply_transform(Point2f& point, param_t& param, Point2f& new_point)
 	{
 		Point2f new_point2 = point * param.s;
@@ -131,20 +131,26 @@ class TemplateMatcher
     {
         int x_1 = floor(p.x);
         int x_2 = ceil(p.x);
+		
         int y_1 = floor(p.y);
         int y_2 = ceil(p.y);
+		
 
         float v1 = m.at<float>(y_1, x_1);
         float v2 = m.at<float>(y_1, x_2);
         float v3 = m.at<float>(y_2, x_1);
         float v4 = m.at<float>(y_2, x_2);
-
-        float fx1 = p.x - x_1;
-        float fy1 = p.y - y_1;
-        float fx2 = 1.0f - fx1;
-        float fy2 = 1.0f - fy1;
-
-        return fx1 * fy1 * v1 + fx1 * fy2 * v3 + fx2 * fy1 * v2 + fx2 * fy2 * v4;
+		
+		
+		float x2_x = x_2 - p.x;
+		float x_x1 = 1 - x2_x;//p.x - x_1;
+		float y2_y = y_2 - p.y;
+		float y_y1 = 1 - y2_y;// p.y - y_1;
+		float f_r1 = x2_x * v1 + x_x1 * v2;
+		float f_r2 = x2_x * v3 + x_x1 * v4;
+		float interpolated = f_r1 * y2_y + f_r2 * y_y1;
+		
+        return interpolated;
     }
 
 };

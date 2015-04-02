@@ -80,11 +80,11 @@ int main( int argc, const char** argv )
 //    imshow("annotated",annotated_img);
 
     configuration_t config;
-    config.do_fast_update = true;
-    config.normalize_scales = true;
+    config.do_fast_update = false;
+    config.normalize_scales = false;
     config.gamma = 1.0f;
-    config.learning_rate = 0.0001f;
-    config.max_iter = 1000;
+    config.learning_rate = 0.000001f;
+    config.max_iter = 50;
     config.dt_truncate = 35.0f;
     config.dt_a = 1.0;
     config.dt_b = 1.5;
@@ -93,11 +93,11 @@ int main( int argc, const char** argv )
     test(t_matcher);
     float m_loss = t_matcher.compute_loss();
     cout<< "loss: "<<m_loss<<endl;
-    t_matcher.minimize_single_step();
+    vector<Point2f> best_points = t_matcher.minimize();
     m_loss = t_matcher.compute_loss();
     cout<<"new loss: "<<m_loss<<endl;
 
-    for(size_t j = 0; j < results[best].size(); j+= 3)
+    for(size_t j = 0; j < results[best].size(); j+= 30)
     {
         Mat dimg = cimg.clone();
         Point pt = results[best][j];
@@ -108,7 +108,7 @@ int main( int argc, const char** argv )
     }
    
 
-    for(int j = 0; j < results.size(); j++)
+    for(size_t j = 0; j < results.size(); j++)
     {
         Mat dimg = cimg.clone();
     	size_t i, n = results[j].size();
@@ -122,6 +122,16 @@ int main( int argc, const char** argv )
 			dimg.at<Vec3b>(pt) = Vec3b(0, 0, 255);
 
     	}
+		vector<Point2f> obj_result = best_points;
+		n = obj_result.size();
+		for( i = 0; i < n; i++)
+		{
+			Point pt = obj_result[i];
+			Point pt2 = obj_result[(i+1)%n];
+			if( pt.inside(Rect(0, 0, cimg.cols, cimg.rows)) && pt2.inside(Rect(0, 0, cimg.cols, cimg.rows)) )
+				line(dimg, pt, pt2, Scalar(255,0,0), 2); 
+				//dimg.at<Vec3b>(pt) = Vec3b(255,0,0);
+		}
 		imshow("result", dimg);
 
     	waitKey(0);
