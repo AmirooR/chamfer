@@ -152,26 +152,9 @@ float TemplateMatcher::compute_loss()
 		if(_newPoint_image.x >= 1 && _newPoint_image.y >= 1 && _newPoint_image.x < edgeImg.cols-1, _newPoint_image.y < edgeImg.rows-1)
 		{
 			/* data term */
-			//interpolation
-			int x_1 = floor(_newPoint_image.x);
-			int x_2 = ceil(_newPoint_image.x);
-			int y_1 = floor(_newPoint_image.y);
-			int y_2 = ceil(_newPoint_image.y);
-		
-			float v1 = DT.at<float>(y_1, x_1);
-			float v2 = DT.at<float>(y_1, x_2);
-			float v3 = DT.at<float>(y_2, x_1);
-			float v4 = DT.at<float>(y_2, x_2);
-		
-			float fx1 = _newPoint_image.x - x_1;
-			float fy1 = _newPoint_image.y - y_1;
-			float fx2 = 1.0f - fx1;
-			float fy2 = 1.0f - fy1;
-		
-			loss += fx1 * fy1 * v1 + fx1 * fy2 * v3 + fx2 * fy1 * v2 + fx2 * fy2 * v4; //TODO: not accurate
-			
+			loss += bilinear_interpolate(DT, _newPoint_image);			
 			/* pairwise term */
-			loss += lambda[i] * param_distance(params[i], params[i+1], i, i+1);
+			loss += lambda[i] * param_distance(params[i], params[(i+1)%params.size()], i, (i+1)%params.size()); //TODO: assuming the contour is closed
 		}
 		else
 		{
@@ -179,6 +162,87 @@ float TemplateMatcher::compute_loss()
 		}
 	}
 	
-	loss += lambda[currentPoints.size()-1] * param_distance(params[currentPoints.size()-1], params[0], currentPoints.size()-1, 0);
+	//loss += lambda[currentPoints.size()-1] * param_distance(params[currentPoints.size()-1], params[0], currentPoints.size()-1, 0);
 	return loss;
+}
+
+void TemplateMatcher::minimize_single_step()
+{
+    current_gradients.resize( currentPoints.size(), param_t(0,0) ); //TODO: check to be correct
+
+    for(size_t i = 0; i < current_gradients.size(); ++i)
+    {
+        Point2f _newPoint;
+        Point2f _newPoint_image;
+        Point2f current_local = imageToLocal(currentPoints[i]);
+        apply_transform( current_local, params[i], _newPoint);
+        _newPoint_image = localToImage(_newPoint);
+
+        if(_newPoint_image.x >= 1 && _newPoint_image.y >= 1 && _newPoint_image.x < edgeImg.cols-1, _newPoint_image.y < edgeImg.rows-1)
+        {
+            float grad_x = bilinear_interpolate(grad_x_DT, _newPoint_image);
+            float grad_y = bilinear_interpolate(grad_y_DT, _newPoint_image);
+
+            /* \frac{\partial dist}{\partial s_n} */
+            float d_s = grad_x * current_local.x + grad_y * current_local.y; 
+            float normalize_1 = 1.0f, normalize_2 = 1.0f;
+            size_t next_id = (i+1)%params.size();
+            if( config.normalize_scales)
+            {
+                normalize_1 = 1.0f/scale_norms[i];
+                normalize_2 = 1.0f/scale_norms[next_id];
+            }
+
+            /* \frac{\partial d2}{\partial s_n}*/
+            d_s += lambda[i] * 2 * config.gamma * normalize_1 * ( params[i].s * normalize_1 - params[next_id].s * normalize_2); 
+            current_gradients[i].s += d_s;
+
+            /* \frac{\partial d2}{\partial s_{n+1}} */
+            float ds_2 = lambda[i] * (-2) * config.gamma * normalize_2 * (params[i].s * normalize_1 - params[next_id].s * normalize_2);
+            current_gradients[next_id].s += ds_2;
+
+            /* \frac{\partial dist}{\partial \phi_n}*/
+            float d_phi = grad_x * ( -sin( params[i].phi ) * current_local.x - cos( params[i].phi ) * current_local.y ) +
+                grad_y * (cos( params[i].phi)*current_local.x - sin(params[i].phi)*current_local.y );
+
+            /* \frac{\partial d2}{\partial \phi_n} */
+            d_phi += lambda[i] *  phi_minus( params[i].phi, params[next_id].phi) / M_PI;
+            current_gradients[i].phi += d_phi;
+
+            /* \frac{\partial d2}{\partial \phi_{n+1} } */
+            float d_phi_2 = -lambda[i] * phi_minus( params[i].phi, params[next_id].phi) / M_PI;
+            current_gradients[next_id].phi += d_phi_2;
+
+            if(config.do_fast_update)
+            {
+                /* update params */
+                params[i].s = params[i].s - config.learning_rate * current_gradients[i].s;
+                params[i].phi = correct_phi( params[i].phi - config.learning_rate * current_gradients[i].phi);
+
+                /* update current point */ 
+                // TODO: what to do for the next_id? (at least the 'last to first' point contribution  will be lost)
+                Point2f _new_local;
+                apply_transform( current_local, params[i], _new_local);
+                Point2f _new_p = localToImage( _new_local);
+                currentPoints[i] = _new_p;
+            }
+
+        }
+
+    }
+
+    if(!config.do_fast_update)
+    {
+        for(size_t i = 0; i < params.size(); ++i)
+        {
+            params[i].s = params[i].s - config.learning_rate * current_gradients[i].s;
+            params[i].phi = correct_phi( params[i].phi - config.learning_rate * current_gradients[i].phi);
+            Point2f current_local = imageToLocal(currentPoints[i]);
+            Point2f _new_local;
+            apply_transform( current_local, params[i], _new_local);
+            Point2f _new_p = localToImage( _new_local);
+            currentPoints[i] = _new_p;
+
+        }
+    } 
 }

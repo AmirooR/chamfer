@@ -8,7 +8,7 @@ using namespace cv;
 using namespace std;
 
 #define PIPI4 M_PI * M_PI * 4
-#define BIG_LOSS 9999999.9
+#define BIG_LOSS 9999999.9f
 
 typedef struct param_t {
     float phi; // rotation angle
@@ -99,9 +99,52 @@ class TemplateMatcher
 			scale_id2 = 1.0f/scale_norms[id2];
 		}	
 
-		return (p1.phi - p2.phi)*(p1.phi - p2.phi)/PIPI4 + (p1.s/scale_id1 - p2.s/scale_id2)*(p1.s/scale_id1 - p2.s/scale_id2);
+		return (phi_minus(p1.phi, p2.phi)*phi_minus(p1.phi, p2.phi))/PIPI4 + config.gamma*(p1.s*scale_id1 - p2.s*scale_id2)*(p1.s*scale_id1 - p2.s*scale_id2);
 	}
+
+    inline float phi_minus(float phi_1, float phi_2)
+    {
+        float d_phi = phi_1 - phi_2;
+        return correct_phi(d_phi);
+    }
+
+    inline float correct_phi( float d_phi)
+    {//TODO: check for not being (d_phi > 2M_PI or d_phi < -2M_PI )
+        if( d_phi < -M_PI)
+        {
+            d_phi += 2*M_PI;
+        }
+        else if( d_phi > M_PI)
+        {
+            d_phi -= 2*M_PI;
+        }
+        return d_phi;
+    }
+
     vector<param_t> getParams(){return params;}
+    
     vector<Point2f> getCurrentPoints(){return currentPoints;}
-    void initialize_params(){/*TODO: implement me */};
+
+    virtual void initialize_params(){/*TODO: implement me */};
+
+    inline float bilinear_interpolate(Mat& m, Point2f& p)
+    {
+        int x_1 = floor(p.x);
+        int x_2 = ceil(p.x);
+        int y_1 = floor(p.y);
+        int y_2 = ceil(p.y);
+
+        float v1 = m.at<float>(y_1, x_1);
+        float v2 = m.at<float>(y_1, x_2);
+        float v3 = m.at<float>(y_2, x_1);
+        float v4 = m.at<float>(y_2, x_2);
+
+        float fx1 = p.x - x_1;
+        float fy1 = p.y - y_1;
+        float fx2 = 1.0f - fx1;
+        float fy2 = 1.0f - fy1;
+
+        return fx1 * fy1 * v1 + fx1 * fy2 * v3 + fx2 * fy1 * v2 + fx2 * fy2 * v4;
+    }
+
 };
