@@ -91,6 +91,7 @@ TemplateMatcher::TemplateMatcher(Mat& _edgeImg, Mat& _template_contour, vector<P
 {
     edgeImg = _edgeImg.clone();
 	template_contour = _template_contour.clone();
+    cout<< "Number of points: "<<_initialPoints.size() <<endl;
 	
     initialPoints.resize( _initialPoints.size() );
 	currentPoints.resize( _initialPoints.size() );
@@ -124,14 +125,19 @@ TemplateMatcher::TemplateMatcher(Mat& _edgeImg, Mat& _template_contour, vector<P
 	}
 	origin.x = origin.x/_initialPoints.size();
 	origin.y = origin.y/_initialPoints.size();
+
+    cout<< "Origin: "<<origin<<endl;
 	
 	if(config.normalize_scales)
 	{
+        cout<<"Scales normalizing factors \n\t";
 		scale_norms.resize( _initialPoints.size(),1.0f);
 		for(size_t i = 0; i < initialPoints.size(); ++i)
 		{
 			scale_norms[i] = euclidean_dist2f(origin, initialPoints[i]);
+            cout<<scale_norms[i]<< " ";
 		}
+        cout<<endl;
 	}
 	
 }
@@ -216,15 +222,21 @@ void TemplateMatcher::minimize_single_step()
             if(config.do_fast_update)
             {
                 /* update params */
-                params[i].s = params[i].s - config.learning_rate * current_gradients[i].s;
-                params[i].phi = correct_phi( params[i].phi - config.learning_rate * current_gradients[i].phi);
+                param_t par;
+                par.s = params[i].s - config.learning_rate * current_gradients[i].s;
+                par.phi = correct_phi( params[i].phi - config.learning_rate * current_gradients[i].phi);
 
                 /* update current point */ 
                 // TODO: what to do for the next_id? (at least the 'last to first' point contribution  will be lost)
                 Point2f _new_local;
-                apply_transform( current_local, params[i], _new_local);
+                apply_transform( current_local, par, _new_local);
                 Point2f _new_p = localToImage( _new_local);
-                currentPoints[i] = _new_p;
+                cout<< "ds: "<<current_gradients[i].s << " dphi: "<<current_gradients[i].phi << endl;
+                if(_new_p.x > 1 && _new_p.y > 1 && _new_p.x < edgeImg.cols -1 && _new_p.y < edgeImg.rows - 1 )
+                {
+                    currentPoints[i] = _new_p;
+                    params[i] = par;
+                }
             }
 
         }
@@ -235,13 +247,18 @@ void TemplateMatcher::minimize_single_step()
     {
         for(size_t i = 0; i < params.size(); ++i)
         {
-            params[i].s = params[i].s - config.learning_rate * current_gradients[i].s;
-            params[i].phi = correct_phi( params[i].phi - config.learning_rate * current_gradients[i].phi);
+            param_t par;
+            par.s = params[i].s - config.learning_rate * current_gradients[i].s;
+            par.phi = correct_phi( params[i].phi - config.learning_rate * current_gradients[i].phi);
             Point2f current_local = imageToLocal(currentPoints[i]);
             Point2f _new_local;
-            apply_transform( current_local, params[i], _new_local);
+            apply_transform( current_local, par, _new_local);
             Point2f _new_p = localToImage( _new_local);
-            currentPoints[i] = _new_p;
+            if(_new_p.x > 1 && _new_p.y > 1 && _new_p.x < edgeImg.cols -1 && _new_p.y < edgeImg.rows - 1 )
+            {
+                currentPoints[i] = _new_p;
+                params[i] = par;
+            }
 
         }
     } 

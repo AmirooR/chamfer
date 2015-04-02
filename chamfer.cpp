@@ -67,7 +67,32 @@ int main( int argc, const char** argv )
     imshow("normalized",dt);
 //    imshow("annotated",annotated_img);
 
+    configuration_t config;
+    config.do_fast_update = true;
+    config.normalize_scales = true;
+    config.gamma = 1.0f;
+    config.learning_rate = 0.0001f;
+    config.max_iter = 1000;
+    config.dt_truncate = 35.0f;
+    config.dt_a = 1.0;
+    config.dt_b = 1.5;
 
+    TemplateMatcher t_matcher(img, tpl, results[best], config);
+    float m_loss = t_matcher.compute_loss();
+    cout<< "loss: "<<m_loss<<endl;
+    t_matcher.minimize_single_step();
+    m_loss = t_matcher.compute_loss();
+    cout<<"new loss: "<<m_loss<<endl;
+
+    for(size_t j = 0; j < results[best].size(); j+= 3)
+    {
+        Mat dimg = cimg.clone();
+        Point pt = results[best][j];
+        //dimg.at<Vec3b>(pt) = Vec3b(0,0,255);
+        circle(dimg, pt, 3,Scalar(0,0,255));
+        imshow("points",dimg);
+        waitKey(0);
+    }
    
 
     for(int j = 0; j < results.size(); j++)
@@ -89,6 +114,8 @@ int main( int argc, const char** argv )
     	waitKey(0);
 
      }
+
+    
 
     
     return 0;
