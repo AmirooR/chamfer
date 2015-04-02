@@ -69,9 +69,9 @@ class TemplateMatcher
     void minimize();
 	inline void apply_transform(Point2f& point, param_t& param, Point2f& new_point)
 	{
-		new_point = point * param.s;
-		new_point.x += cos(param.phi)*point.x - sin(param.phi)*point.y;
-		new_point.y += cos(param.phi)*point.y + sin(param.phi)*point.x;
+		Point2f new_point2 = point * param.s;
+		new_point.x = cos(param.phi)*new_point2.x - sin(param.phi)*new_point2.y;
+		new_point.y = cos(param.phi)*new_point2.y + sin(param.phi)*new_point2.x;
 	}
 	
 	inline Point2f imageToLocal(Point2f& image_point)

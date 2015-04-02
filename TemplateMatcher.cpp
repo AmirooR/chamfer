@@ -164,6 +164,12 @@ float TemplateMatcher::compute_loss()
 		}
 		else
 		{
+            cout<<"id: "<<i<<" x: "<<_newPoint_image.x<<" y: "<< _newPoint_image.y<<endl;
+            cout<<"currentPoints[i]: "<<currentPoints[i]<<endl;
+            cout<<"current_local: "<<current_local<<endl;
+            cout<<"p.s: "<<params[i].s<<" p.phi: "<<params[i].phi<<endl;
+            cout<<"_newPoint: "<<_newPoint<<endl;
+            cout<<"_newPoint_image: "<< _newPoint_image <<endl;
 			return BIG_LOSS;
 		}
 	}
