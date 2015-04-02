@@ -179,7 +179,6 @@ float TemplateMatcher::compute_loss()
 
 void TemplateMatcher::minimize_single_step()
 {
-    //current_gradients.resize( currentPoints.size(), param_t(0,0) ); //TODO: check to be correct
     std::fill(current_gradients.begin(), current_gradients.end(), param_t(0,0));
 
     for(size_t i = 0; i < current_gradients.size(); ++i)
