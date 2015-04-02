@@ -5,6 +5,18 @@
 using namespace std;
 using namespace cv;
 
+static void test(TemplateMatcher& t)
+{
+    Point2f image_p(34.0f, 161.0f);
+    Point2f local_p = t.imageToLocal(image_p);
+    param_t p;
+    p.s = 1; p.phi = 0;
+    Point2f new_p;
+    t.apply_transform( local_p, p, new_p);
+    Point2f new_p_image = t.localToImage( new_p);
+    cout<<"New p: "<<new_p_image<<endl;
+}
+
 static void help()
 {
 
@@ -78,6 +90,7 @@ int main( int argc, const char** argv )
     config.dt_b = 1.5;
 
     TemplateMatcher t_matcher(img, tpl, results[best], config);
+    test(t_matcher);
     float m_loss = t_matcher.compute_loss();
     cout<< "loss: "<<m_loss<<endl;
     t_matcher.minimize_single_step();
