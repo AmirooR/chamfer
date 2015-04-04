@@ -105,10 +105,12 @@ TemplateMatcher::TemplateMatcher(Mat& _edgeImg, Mat& _template_contour, vector<P
 	DT.create(edgeImg.size(), CV_32FC1);
 	DT.setTo(0);	
 	computeDistanceTransform2(edgeImg, DT, annotated_img, config.dt_truncate, config.dt_a, config.dt_b);
-	
+    if( config.normalize_dt )
+        normalize( DT, DT, 0, 1., cv::NORM_MINMAX);
+
 	//lambda.create(edgeImg.size(), CV_32FC1);
 	//lambda.setTo(1.0f); //TODO: how to calc. lambda
-	lambda.resize(_initialPoints.size(), 5.0);
+	lambda.resize(_initialPoints.size(), config.lambda_dc);
 	
 	//computing gradients
 	Scharr( DT, grad_x_DT, CV_32FC1, 1, 0, 1, 0, BORDER_DEFAULT );

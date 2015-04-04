@@ -33,6 +33,7 @@ typedef struct configuration_t {
     bool normalize_dt;
 	float gamma; // scale factor for scales in d_2
 	float learning_rate; // learning rate
+    float lambda_dc; // DC of lambda
 	int max_iter; // max. number of iterations
 	float dt_truncate; // DT truncation
 	float dt_a;

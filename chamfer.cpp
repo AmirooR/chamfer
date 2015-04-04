@@ -82,6 +82,8 @@ int main( int argc, const char** argv )
     configuration_t config;
     config.do_fast_update = false;
     config.normalize_scales = false;
+    config.normalize_dt = true;
+    config.lambda_dc = 1.0f;
     config.gamma = 1.0f;
     config.learning_rate = 0.000001f;
     config.max_iter = 100;
