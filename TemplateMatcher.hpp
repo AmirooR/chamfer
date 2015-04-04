@@ -30,6 +30,7 @@ typedef struct param_t {
 typedef struct configuration_t {
     bool do_fast_update;
     bool normalize_scales;
+    bool normalize_dt;
 	float gamma; // scale factor for scales in d_2
 	float learning_rate; // learning rate
 	int max_iter; // max. number of iterations

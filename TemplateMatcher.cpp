@@ -108,7 +108,7 @@ TemplateMatcher::TemplateMatcher(Mat& _edgeImg, Mat& _template_contour, vector<P
 	
 	//lambda.create(edgeImg.size(), CV_32FC1);
 	//lambda.setTo(1.0f); //TODO: how to calc. lambda
-	lambda.resize(_initialPoints.size(), 1.0);
+	lambda.resize(_initialPoints.size(), 5.0);
 	
 	//computing gradients
 	Scharr( DT, grad_x_DT, CV_32FC1, 1, 0, 1, 0, BORDER_DEFAULT );
@@ -145,21 +145,24 @@ float TemplateMatcher::compute_loss()
 {
 	//TODO: asserts
 	float loss = 0.0f;
-	for(size_t i = 0; i < currentPoints.size(); ++i)
+	for(size_t i = 0; i < initialPoints.size(); ++i)
 	{
 		//TODO: can make it faster
 		Point2f _newPoint;
 		Point2f _newPoint_image;
-		Point2f current_local = imageToLocal(currentPoints[i]);
+		Point2f current_local = imageToLocal(initialPoints[i]);
 		apply_transform( current_local, params[i], _newPoint);
 		_newPoint_image = localToImage(_newPoint);
+        currentPoints[i] = _newPoint_image;
 		
 		if( (_newPoint_image.x >= 1) && (_newPoint_image.y >= 1) && (_newPoint_image.x < (edgeImg.cols-1)) && (_newPoint_image.y < (edgeImg.rows-1)))
 		{
 			/* data term */
 			loss += bilinear_interpolate(DT, _newPoint_image);			
 			/* pairwise term */
-			loss += lambda[i] * param_distance(params[i], params[(i+1)%params.size()], i, (i+1)%params.size()); //TODO: assuming the contour is closed
+            size_t prev_id = i == 0 ? params.size()-1 : i-1;
+            
+			loss += lambda[i] * ( param_distance(params[i], params[(i+1)%params.size()], i, (i+1)%params.size()) + param_distance(params[i], params[prev_id], i, prev_id) ); //TODO: assuming the contour is closed
 		}
 		else
 		{
@@ -185,7 +188,7 @@ void TemplateMatcher::minimize_single_step()
     {
         Point2f _newPoint;
         Point2f _newPoint_image;
-        Point2f current_local = imageToLocal(currentPoints[i]);
+        Point2f current_local = imageToLocal(initialPoints[i]);
         apply_transform( current_local, params[i], _newPoint);
         _newPoint_image = localToImage(_newPoint);
 
@@ -196,21 +199,28 @@ void TemplateMatcher::minimize_single_step()
 
             /* \frac{\partial dist}{\partial s_n} */
             float d_s = grad_x * current_local.x + grad_y * current_local.y; 
-            float normalize_1 = 1.0f, normalize_2 = 1.0f;
+            float normalize_1 = 1.0f, normalize_2 = 1.0f, normalize_3 = 1.0f;
             size_t next_id = (i+1)%params.size();
+            size_t prev_id = i==0 ? params.size()-1 : i-1;
+
             if( config.normalize_scales)
             {
                 normalize_1 = 1.0f/scale_norms[i];
                 normalize_2 = 1.0f/scale_norms[next_id];
+                normalize_3 = 1.0f/scale_norms[prev_id];
             }
 
             /* \frac{\partial d2}{\partial s_n}*/
-            d_s += lambda[i] * 2 * config.gamma * normalize_1 * ( params[i].s * normalize_1 - params[next_id].s * normalize_2); 
+            d_s += lambda[i] * 2 * config.gamma * normalize_1 * ( params[i].s * normalize_1 - params[next_id].s * normalize_2);
+            d_s += lambda[i] * 2 * config.gamma * normalize_1 * ( params[i].s * normalize_1 - params[prev_id].s * normalize_3); 
             current_gradients[i].s += d_s;
 
             /* \frac{\partial d2}{\partial s_{n+1}} */
             float ds_2 = lambda[i] * (-2) * config.gamma * normalize_2 * (params[i].s * normalize_1 - params[next_id].s * normalize_2);
+            float ds_3 = lambda[i] * (-2) * config.gamma * normalize_3 * (params[i].s * normalize_1 - params[prev_id].s * normalize_3);
+
             current_gradients[next_id].s += ds_2;
+            current_gradients[prev_id].s += ds_3;
 
             /* \frac{\partial dist}{\partial \phi_n}*/
             float d_phi = grad_x * ( -sin( params[i].phi ) * current_local.x - cos( params[i].phi ) * current_local.y ) +
@@ -218,11 +228,15 @@ void TemplateMatcher::minimize_single_step()
 
             /* \frac{\partial d2}{\partial \phi_n} */
             d_phi += lambda[i] *  phi_minus( params[i].phi, params[next_id].phi) / M_PI;
+            d_phi += lambda[i] *  phi_minus( params[i].phi, params[prev_id].phi) / M_PI;
+
             current_gradients[i].phi += d_phi;
 
             /* \frac{\partial d2}{\partial \phi_{n+1} } */
             float d_phi_2 = -lambda[i] * phi_minus( params[i].phi, params[next_id].phi) / M_PI;
             current_gradients[next_id].phi += d_phi_2;
+            float d_phi_3 = -lambda[i] * phi_minus( params[i].phi, params[prev_id].phi) / M_PI;
+            current_gradients[prev_id].phi += d_phi_3;
 
             if(config.do_fast_update)
             {
@@ -255,7 +269,7 @@ void TemplateMatcher::minimize_single_step()
             param_t par;
             par.s = params[i].s - config.learning_rate * current_gradients[i].s;
             par.phi = correct_phi( params[i].phi - config.learning_rate * current_gradients[i].phi);
-            Point2f current_local = imageToLocal(currentPoints[i]);
+            Point2f current_local = imageToLocal(initialPoints[i]);
             Point2f _new_local;
             apply_transform( current_local, par, _new_local);
             Point2f _new_p = localToImage( _new_local);

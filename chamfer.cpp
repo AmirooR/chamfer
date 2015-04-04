@@ -84,7 +84,7 @@ int main( int argc, const char** argv )
     config.normalize_scales = false;
     config.gamma = 1.0f;
     config.learning_rate = 0.000001f;
-    config.max_iter = 30;
+    config.max_iter = 100;
     config.dt_truncate = 35.0f;
     config.dt_a = 1.0;
     config.dt_b = 1.5;
