@@ -289,7 +289,7 @@ void TemplateMatcher::minimize_single_step()
 vector<Point2f> TemplateMatcher::minimize()
 {
 	float best_loss = BIG_LOSS;
-	vector<Point2f> best_points;
+	//vector<Point2f> best_points;
 	for(int i = 0; i < config.max_iter; i++)
 	{		
 		minimize_single_step();
@@ -297,9 +297,10 @@ vector<Point2f> TemplateMatcher::minimize()
 		if(n_loss < best_loss)
 		{
 			best_loss = n_loss;
-			best_points = currentPoints;
+			bestPoints = currentPoints;
+            bestParams = params;
 		}
 		cout<<"\t ** LOSS: "<< n_loss << endl;
 	}
-	return best_points;
+	return bestPoints;
 }

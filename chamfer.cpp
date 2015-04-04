@@ -85,7 +85,7 @@ int main( int argc, const char** argv )
     config.normalize_dt = true;
     config.lambda_dc = 1.0f;
     config.gamma = 1.0f;
-    config.learning_rate = 0.000001f;
+    config.learning_rate = 0.0001f;
     config.max_iter = 100;
     config.dt_truncate = 35.0f;
     config.dt_a = 1.0;

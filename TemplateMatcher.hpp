@@ -50,6 +50,8 @@ class TemplateMatcher
 	
     vector<Point2f> initialPoints;
     vector<Point2f> currentPoints;
+    vector<Point2f> bestPoints;
+    vector<param_t> bestParams;
 	vector<float> lambda; // scale factor for d_2 in loss function
     Mat DT; // distance_transform image
     Mat grad_x_DT; // gradient of DT in x direction
@@ -124,6 +126,8 @@ class TemplateMatcher
     }
 
     vector<param_t> getParams(){return params;}
+    vector<param_t> getBestParams(){return bestParams;}
+    vector<Point2f> getBestPoints(){return bestPoints;}
     
     vector<Point2f> getCurrentPoints(){return currentPoints;}
 
