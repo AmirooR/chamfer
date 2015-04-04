@@ -1,5 +1,6 @@
 # Chamfer
-Compute Chamfer distance between two edge images
+Compute Chamfer distance between two edge images and then applies gradient
+descent optimization to deform the contour points to move toward edges
 
 **Compile:**
 
