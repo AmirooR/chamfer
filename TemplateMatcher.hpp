@@ -34,6 +34,7 @@ typedef struct configuration_t {
 	float gamma; // scale factor for scales in d_2
 	float learning_rate; // learning rate
     float lambda_dc; // DC of lambda
+    float alpha; // for second order derivatives
 	int max_iter; // max. number of iterations
 	float dt_truncate; // DT truncation
 	float dt_a;
@@ -105,6 +106,10 @@ class TemplateMatcher
 
 		return (phi_minus(p1.phi, p2.phi)*phi_minus(p1.phi, p2.phi))/PIPI4 + config.gamma*(p1.s*scale_id1 - p2.s*scale_id2)*(p1.s*scale_id1 - p2.s*scale_id2);
 	}
+
+    /*virtual float curvature_distance(size_t id_prev, size_t id, size_t id_next)
+    {
+    }*/
 
     inline float phi_minus(float phi_1, float phi_2)
     {

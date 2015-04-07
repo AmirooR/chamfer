@@ -80,16 +80,19 @@ int main( int argc, const char** argv )
 //    imshow("annotated",annotated_img);
 
     configuration_t config;
-    config.do_fast_update = false;
-    config.normalize_scales = false;
-    config.normalize_dt = true;
-    config.lambda_dc = 1.0f;
-    config.gamma = 1.0f;
-    config.learning_rate = 0.0001f;
-    config.max_iter = 100;
-    config.dt_truncate = 35.0f;
-    config.dt_a = 1.0;
-    config.dt_b = 1.5;
+    {
+        config.do_fast_update = false;//true;
+        config.normalize_scales = false;//true;
+        config.normalize_dt = true;
+        config.lambda_dc = 10.0f;
+        config.gamma = 1.0f;
+        config.learning_rate = 0.0001f;
+        config.alpha = 0.001f;
+        config.max_iter = 100;
+        config.dt_truncate = 35.0f;
+        config.dt_a = 1.0;
+        config.dt_b = 1.5;
+    }
 
     TemplateMatcher t_matcher(img, tpl, results[best], config);
     test(t_matcher);

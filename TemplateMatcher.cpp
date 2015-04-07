@@ -163,8 +163,18 @@ float TemplateMatcher::compute_loss()
 			loss += bilinear_interpolate(DT, _newPoint_image);			
 			/* pairwise term */
             size_t prev_id = i == 0 ? params.size()-1 : i-1;
+            size_t next_id = (i+1)%params.size();
             
-			loss += lambda[i] * ( param_distance(params[i], params[(i+1)%params.size()], i, (i+1)%params.size()) + param_distance(params[i], params[prev_id], i, prev_id) ); //TODO: assuming the contour is closed
+			loss += lambda[i] * ( param_distance(params[i], params[next_id], i, next_id) + param_distance(params[i], params[prev_id], i, prev_id) ); //TODO: assuming the contour is closed
+
+            /* curvature */
+            Point2f prev_local = imageToLocal(initialPoints[prev_id]); //w_{n-1}
+            Point2f next_local = imageToLocal(initialPoints[next_id]); //w_{n+1}
+            Point2f prev_new_point, next_new_point;
+            apply_transform(prev_local, params[prev_id], prev_new_point); //w_{n-1}^t
+            apply_transform(next_local, params[next_id], next_new_point); //w_{n+1}^t
+            Point2f c = prev_new_point - (_newPoint * 2.0f) + next_new_point;
+            loss += config.alpha * (c.x*c.x + c.y*c.y);
 		}
 		else
 		{
@@ -200,10 +210,16 @@ void TemplateMatcher::minimize_single_step()
             float grad_y = bilinear_interpolate(grad_y_DT, _newPoint_image);
 
             /* \frac{\partial dist}{\partial s_n} */
-            float d_s = grad_x * current_local.x + grad_y * current_local.y; 
+            float d_s = grad_x * current_local.x + grad_y * current_local.y; //TODO: check
             float normalize_1 = 1.0f, normalize_2 = 1.0f, normalize_3 = 1.0f;
             size_t next_id = (i+1)%params.size();
             size_t prev_id = i==0 ? params.size()-1 : i-1;
+
+            Point2f prev_local = imageToLocal(initialPoints[prev_id]); //w_{n-1}
+            Point2f next_local = imageToLocal(initialPoints[next_id]); //w_{n+1}
+            Point2f prev_new_point, next_new_point;
+            apply_transform(prev_local, params[prev_id], prev_new_point); //w_{n-1}^t
+            apply_transform(next_local, params[next_id], next_new_point); //w_{n+1}^t
 
             if( config.normalize_scales)
             {
@@ -215,11 +231,23 @@ void TemplateMatcher::minimize_single_step()
             /* \frac{\partial d2}{\partial s_n}*/
             d_s += lambda[i] * 2 * config.gamma * normalize_1 * ( params[i].s * normalize_1 - params[next_id].s * normalize_2);
             d_s += lambda[i] * 2 * config.gamma * normalize_1 * ( params[i].s * normalize_1 - params[prev_id].s * normalize_3); 
+
+            /* \frac{\partial d3}{\partial s_n} */
+            //TODO: not sure about it (just use sum for x,y)
+            Point2f d = prev_new_point - (_newPoint * 2.0f) + next_new_point;
+
+            d_s += config.alpha * (-4) * ( d.x * current_local.x + d.y * current_local.y);
+
+
             current_gradients[i].s += d_s;
 
             /* \frac{\partial d2}{\partial s_{n+1}} */
             float ds_2 = lambda[i] * (-2) * config.gamma * normalize_2 * (params[i].s * normalize_1 - params[next_id].s * normalize_2);
+            /* \frac{\partial d3}{\partial s_{n+1}} */
+            ds_2 += config.alpha * 2 * (d.x * next_local.x + d.y * next_local.y);
+
             float ds_3 = lambda[i] * (-2) * config.gamma * normalize_3 * (params[i].s * normalize_1 - params[prev_id].s * normalize_3);
+            ds_3 += config.alpha * 2 * (d.x * prev_local.x + d.y * prev_local.y);
 
             current_gradients[next_id].s += ds_2;
             current_gradients[prev_id].s += ds_3;
@@ -232,12 +260,23 @@ void TemplateMatcher::minimize_single_step()
             d_phi += lambda[i] *  phi_minus( params[i].phi, params[next_id].phi) / M_PI;
             d_phi += lambda[i] *  phi_minus( params[i].phi, params[prev_id].phi) / M_PI;
 
+            /* \frac{\partial d3}{\partial \phi_n} */
+            d_phi += config.alpha * (-4) * ( ( -sin(params[i].phi) * current_local.x - cos(params[i].phi) * current_local.y)*d.x + (cos( params[i].phi)*current_local.x - sin(params[i].phi)*current_local.y)*d.y );
+
             current_gradients[i].phi += d_phi;
 
             /* \frac{\partial d2}{\partial \phi_{n+1} } */
             float d_phi_2 = -lambda[i] * phi_minus( params[i].phi, params[next_id].phi) / M_PI;
+            
+            d_phi_2 += config.alpha * 2 * (d.x * (-sin(params[next_id].phi)* next_local.x - cos(params[next_id].phi) * next_local.y) + (cos(params[next_id].phi)*next_local.x - sin(params[next_id].phi) * next_local.y) * d.y);
+            
             current_gradients[next_id].phi += d_phi_2;
+                        
             float d_phi_3 = -lambda[i] * phi_minus( params[i].phi, params[prev_id].phi) / M_PI;
+            
+            d_phi_3 += config.alpha * 2 * (d.x * (-sin(params[prev_id].phi)* prev_local.x - cos(params[prev_id].phi) * prev_local.y) + (cos(params[prev_id].phi)*prev_local.x - sin(params[prev_id].phi) * prev_local.y) * d.y);
+
+
             current_gradients[prev_id].phi += d_phi_3;
 
             if(config.do_fast_update)
