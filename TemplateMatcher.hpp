@@ -8,7 +8,7 @@ using namespace cv;
 using namespace std;
 
 #define PIPI4 M_PI * M_PI * 4
-#define BIG_LOSS 9999999.9f
+#define BIG_LOSS 999999999999.9f
 
 typedef struct param_t {
     float phi; // rotation angle

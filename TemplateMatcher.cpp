@@ -341,5 +341,6 @@ vector<Point2f> TemplateMatcher::minimize()
 		}
 		cout<<"\t ** LOSS: "<< n_loss << endl;
 	}
+    cout<<"\t ** BEST LOSS: "<< best_loss << endl;
 	return bestPoints;
 }

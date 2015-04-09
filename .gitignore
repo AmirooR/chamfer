@@ -3,3 +3,6 @@
 chamfer
 temp/*
 Template/*
+result*.png
+*.txt
+chamfer_dir

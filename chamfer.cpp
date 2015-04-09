@@ -61,7 +61,8 @@ int main( int argc, const char** argv )
 
     vector<vector<Point> > results;
     vector<float> costs;
-    int best = chamerMatching( img, tpl, results, costs, 1, 10, 5.0, 3,3, 15, 0.8, 3.0, 0.4, 35 );
+    float dt_truncate = 125.0f;
+    int best = chamerMatching( img, tpl, results, costs, 1, 10, 5.0, 3,3, 15, 0.9, 2.0, 0.5, dt_truncate );
     if( best < 0 )
     {
         cout << "matching not found" << endl;
@@ -82,19 +83,33 @@ int main( int argc, const char** argv )
     configuration_t config;
     {
         config.do_fast_update = false;//true;
-        config.normalize_scales = false;//true;
+        config.normalize_scales = true;
         config.normalize_dt = true;
-        config.lambda_dc = 10.0f;
-        config.gamma = 1.0f;
-        config.learning_rate = 0.0001f;
-        config.alpha = 0.001f;
-        config.max_iter = 100;
-        config.dt_truncate = 35.0f;
+        config.lambda_dc = .2f;//0.02f;
+        config.gamma = 2000.1f;//2000.0f;
+        config.learning_rate = 0.001f;//0.00012f;
+        config.alpha = 0.0008f;//0.00005f;
+        config.max_iter = 8423;
+        config.dt_truncate = dt_truncate;
         config.dt_a = 1.0;
         config.dt_b = 1.5;
     }
 
-    TemplateMatcher t_matcher(img, tpl, results[best], config);
+    vector<Point> my_results;
+    int sample_step = 10;
+    if(true)
+    {
+        for(size_t i = 0; i < results[best].size(); i+=sample_step)
+        {
+            my_results.push_back( results[best][i] );
+        }
+    }
+    else
+    {
+        my_results = results[best];
+    }
+
+    TemplateMatcher t_matcher(img, tpl, my_results, config);
     test(t_matcher);
     float m_loss = t_matcher.compute_loss();
     cout<< "loss: "<<m_loss<<endl;
@@ -134,7 +149,10 @@ int main( int argc, const char** argv )
 			Point pt = obj_result[i];
 			Point pt2 = obj_result[(i+1)%n];
 			if( pt.inside(Rect(0, 0, cimg.cols, cimg.rows)) && pt2.inside(Rect(0, 0, cimg.cols, cimg.rows)) )
+            {
 				line(dimg, pt, pt2, Scalar(255,0,0), 2); 
+                line(dimg, pt, my_results[i], Scalar(0,255,255),1);
+            }
 				//dimg.at<Vec3b>(pt) = Vec3b(255,0,0);
 		}
 		imshow("result", dimg);
