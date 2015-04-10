@@ -62,7 +62,7 @@ int main( int argc, const char** argv )
     vector<vector<Point> > results;
     vector<float> costs;
     float dt_truncate = 125.0f;
-    int best = chamerMatching( img, tpl, results, costs, 1, 10, 5.0, 3,3, 15, 0.9, 2.0, 0.5, dt_truncate );
+    int best = chamerMatching( img, tpl, results, costs, 1, 10, 5.0, 3,3, 15, 0.9, 2.0, 0.4, dt_truncate );
     if( best < 0 )
     {
         cout << "matching not found" << endl;
@@ -85,10 +85,10 @@ int main( int argc, const char** argv )
         config.do_fast_update = false;//true;
         config.normalize_scales = true;
         config.normalize_dt = true;
-        config.lambda_dc = .2f;//0.02f;
+        config.lambda_dc = .02f;//0.02f;
         config.gamma = 2000.1f;//2000.0f;
-        config.learning_rate = 0.001f;//0.00012f;
-        config.alpha = 0.0008f;//0.00005f;
+        config.learning_rate = 0.0001f;//0.00012f;
+        config.alpha = 0.00008f;//0.00005f;
         config.max_iter = 8423;
         config.dt_truncate = dt_truncate;
         config.dt_a = 1.0;

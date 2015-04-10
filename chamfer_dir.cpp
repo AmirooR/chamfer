@@ -13,7 +13,7 @@ int main( int argc, const char** argv )
     string root("/home/amir/src/intrinsics/util/");
     string models_dir = root + string("model_contours/");
     string imgList = root + string("imgList.txt");
-    string mpb_dir = root + string("mPb_contours/");
+    string mpb_dir = root + string("mPb_contours_100/");
     /*Dir *dir;
     struct dirent *ent;
     if( (dir = opendir(img_dir.c_str())) != NULL )
@@ -54,7 +54,8 @@ int main( int argc, const char** argv )
         if( best < 0 )
         {
             cout << "matching not found" << endl;
-            return -1;
+            continue;
+            //return -1;
         }
         cout << "Results: "<<endl;
         Mat dt;
